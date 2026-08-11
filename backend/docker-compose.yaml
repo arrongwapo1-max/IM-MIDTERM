@@ -1,17 +1,17 @@
 services:
-  app-new:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
       target: development
-    image: test-api-app
+    image: api-app
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      DB_HOST: db-new
+      DB_HOST: db
     depends_on:
-      db-new:
+      db:
         condition: service_healthy
     healthcheck:
       test:
@@ -26,27 +26,27 @@ services:
     volumes:
       - ./:/var/www/html
     networks:
-      - laravel-test
+      - laravel-network
 
-  web-new:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
       target: nginx
-    image: test-api-web
+    image: api-web
     restart: unless-stopped
     depends_on:
-      app-new:
+      app:
         condition: service_healthy
     ports:
-      - "8000:80"
+      - "3001:80"
     volumes:
       - ./public:/var/www/html/public:ro
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
-      - laravel-test
+      - laravel-network
 
-  db-new:
+  db:
     image: mysql:8.4
     restart: unless-stopped
     environment:
@@ -57,7 +57,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     ports:
-      - "3307:3306"
+      - "3306:3306"
     healthcheck:
       test:
         [
@@ -69,26 +69,26 @@ services:
       retries: 10
       start_period: 30s
     networks:
-      - laravel-test
+      - laravel-network
     
   phpmyadmin-new:
     image: phpmyadmin:5
     restart: unless-stopped
     depends_on:
-      db-new:
+      db:
         condition: service_healthy
     environment:
-      PMA_HOST: db-new
+      PMA_HOST: db
       PMA_PORT: 3306
       UPLOAD_LIMIT: 64M
     ports:
-      - "127.0.0.1:8001:80"
+      - "127.0.0.1:3002:80"
     networks:
-      - laravel-test
+      - laravel-network
 
 
 networks:
-  laravel-test:
+  laravel-network:
     driver: bridge
 
 volumes:

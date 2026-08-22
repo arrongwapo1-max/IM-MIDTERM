@@ -1,0 +1,3 @@
+# Local development artifacts
+/backend/.composer/
+/cacert.pem

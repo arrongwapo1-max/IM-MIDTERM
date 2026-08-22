@@ -2,15 +2,35 @@
 set -e
 
 cd /var/www/html
-# Ensure Git writes its global config to a writable location (the working directory) and mark the directory as safe
+
+# Ensure Composer and Laravel can write to writable directories in the bind-mounted app tree.
+mkdir -p \
+    /var/www/html/vendor \
+    /var/www/html/bootstrap/cache \
+    /var/www/html/storage/logs \
+    /var/www/html/storage/framework/cache \
+    /var/www/html/storage/framework/sessions \
+    /var/www/html/storage/framework/testing \
+    /var/www/html/storage/framework/views \
+    /var/www/.composer \
+    /var/www/.composer/cache
+
 export HOME=/var/www/html
-git config --global --add safe.directory /var/www/html
+export COMPOSER_HOME=/var/www/.composer
+
+# Give the runtime user write access when the project directory is mounted from the host.
+chown -R www-data:www-data /var/www/html /var/www/.composer 2>/dev/null || true
+chmod -R u+rwX,g+rwX /var/www/html /var/www/.composer 2>/dev/null || true
+
+# Ensure Git writes its global config to a writable location (the working directory) and mark the directory as safe
+ git config --global --add safe.directory /var/www/html
 
 # --- Development only: bind-mounted volume may be missing dependencies -------
 if [ "$APP_ENV" != "production" ]; then
     if [ ! -f vendor/autoload.php ]; then
         echo "[entrypoint] Installing composer dependencies..."
-        composer install --no-interaction --prefer-dist
+        composer config --global cache-dir "$COMPOSER_HOME/cache"
+        composer install --no-dev --no-interaction --prefer-dist --no-progress
     fi
 
     # Generate an app key into the (bind-mounted) .env if it has none.

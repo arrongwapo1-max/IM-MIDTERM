@@ -6,10 +6,14 @@ services:
       target: development
     image: api-app
     restart: unless-stopped
+    user: root
     env_file:
       - .env
     environment:
       DB_HOST: db
+      APP_ENV: local
+      COMPOSER_HOME: /tmp/composer
+      HOME: /tmp
     depends_on:
       db:
         condition: service_healthy
@@ -25,6 +29,7 @@ services:
       start_period: 10s
     volumes:
       - ./:/var/www/html
+      - backend-vendor:/var/www/html/vendor
     networks:
       - laravel-network
 
@@ -93,4 +98,6 @@ networks:
 
 volumes:
   mysql-data:
+    driver: local
+  backend-vendor:
     driver: local

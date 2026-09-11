@@ -6,6 +6,7 @@ import {
   Clock3,
   Database,
   FileText,
+  FileSpreadsheet,
   LockKeyhole,
   Megaphone,
   Plus,
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/section";
 import { StatusBadge } from "@/components/ui/tag";
+import * as XLSX from "xlsx";
 
 const panel = "rounded-lg border border-slate-200 bg-white p-6";
 const label = "text-sm font-bold uppercase tracking-wider text-[#059675]";
@@ -386,7 +388,6 @@ export function CounselorDashboard() {
 
 export function AdminDashboard() {
   const { concerns, appointments, user, updateConcernStatus, updateAppointmentStatus } = useApp();
-  const [reportCopied, setReportCopied] = useState(false);
   const studentAccountCount = new Set([
     ...concerns.map((item) => item.student),
     ...appointments.map((item) => item.student),
@@ -409,40 +410,54 @@ export function AdminDashboard() {
     },
   ];
 
-  function getReportRows() {
-    return [
-      ["Record type", "ID", "Student", "Status", "Category", "Date", "Time", "Course", "Section"],
-      ...concerns.map((item) => [
-        "Concern",
-        item.id,
-        item.student,
-        item.status,
-        item.category,
-        item.submitted,
-        "",
-        item.course,
-        item.section,
-      ]),
-      ...appointments.map((item) => [
-        "Appointment",
-        item.id,
-        item.student,
-        item.status,
-        item.category || item.type,
-        item.date,
-        item.time,
-        item.course,
-        item.section,
-      ]),
-    ];
+  function downloadWorkbook(filename: string, sheetName: string, rows: Record<string, unknown>[]) {
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    XLSX.writeFile(workbook, filename);
   }
 
-  async function exportToGoogleDocs() {
-    const table = getReportRows().map((row) => row.map((value) => String(value ?? "")).join("\t")).join("\n");
-    await navigator.clipboard.writeText(table);
-    setReportCopied(true);
-    window.open("https://docs.google.com/document/create", "_blank", "noopener,noreferrer");
-    window.setTimeout(() => setReportCopied(false), 3000);
+  function exportConcerns() {
+    downloadWorkbook(
+      "comfyhub-concerns.xlsx",
+      "Concerns",
+      concerns.map((item) => ({
+        ID: item.id,
+        Title: item.title,
+        Content: item.content,
+        Category: item.category,
+        Status: item.status,
+        Student: item.student,
+        Course: item.course || "",
+        Section: item.section || "",
+        Audience: item.audience || "",
+        Submitted: item.submitted,
+        Archived: item.archived ? "Yes" : "No",
+        Pinned: item.pinned ? "Yes" : "No",
+        Attachment: item.attachment_name || "",
+      })),
+    );
+  }
+
+  function exportAppointments() {
+    downloadWorkbook(
+      "comfyhub-appointments.xlsx",
+      "Appointments",
+      appointments.map((item) => ({
+        ID: item.id,
+        Student: item.student,
+        Counselor: item.counselor,
+        Date: item.date,
+        Time: item.time,
+        Type: item.type,
+        Category: item.category || "",
+        Modality: item.modality || "",
+        Status: item.status,
+        Course: item.course || "",
+        Section: item.section || "",
+        Archived: item.archived ? "Yes" : "No",
+      })),
+    );
   }
 
   return (
@@ -452,9 +467,14 @@ export function AdminDashboard() {
         title="Institutional command center"
         description="Monitor system health, records, and security activity across ComfyHub."
         action={
-          <Button variant="secondary" onClick={exportToGoogleDocs} title="Copy records and open Google Docs">
-            <Database size={16} /> {reportCopied ? "Copied - paste in Google Docs" : "Export to Google Docs"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={exportConcerns} title="Export all concern records to Excel">
+              <FileSpreadsheet size={16} /> Export Concerns
+            </Button>
+            <Button variant="secondary" onClick={exportAppointments} title="Export all appointment records to Excel">
+              <FileSpreadsheet size={16} /> Export Appointments
+            </Button>
+          </div>
         }
       />
       <div className="flex flex-wrap gap-6 rounded border border-[#A7F3D6] bg-[#ECFDF6] px-4 py-3 text-sm text-[#047860]">

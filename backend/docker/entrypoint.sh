@@ -27,10 +27,10 @@ chmod -R u+rwX,g+rwX /var/www/html /var/www/.composer 2>/dev/null || true
 
 # --- Development only: bind-mounted volume may be missing dependencies -------
 if [ "$APP_ENV" != "production" ]; then
-    if [ ! -f vendor/autoload.php ]; then
+    if [ ! -f vendor/autoload.php ] || [ ! -x vendor/bin/phpunit ]; then
         echo "[entrypoint] Installing composer dependencies..."
         composer config --global cache-dir "$COMPOSER_HOME/cache"
-        composer install --no-dev --no-interaction --prefer-dist --no-progress
+        composer install --no-interaction --prefer-dist --no-progress
     fi
 
     # Generate an app key into the (bind-mounted) .env if it has none.
